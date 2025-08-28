@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bokits Chat Room</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; }
+    #chat-box { border: 1px solid #ccc; background: white; height: 300px; overflow-y: auto; padding: 10px; margin-bottom: 10px; }
+    #message { width: 80%; padding: 5px; }
+    #send { padding: 5px; }
+    .admin-btn { margin-left: 10px; color: red; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<h2>Supabase Chat Room</h2>
+<div id="login">
+  <input type="email" id="emailInput" placeholder="Enter your email">
+  <button id="joinBtn">Join Chat</button>
+</div>
+
+<div id="chat" style="display:none;">
+  <div id="chat-box"></div>
+  <input type="text" id="message" placeholder="Type a message...">
+  <button id="send">Send</button>
+</div>
+
+<script>
+  // Replace with your Supabase project values
+  const SUPABASE_URL = "https://lwkgijcmnobxxsbvzewp.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3a2dpamNtbm9ieHhzYnZ6ZXdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0MTg3OTcsImV4cCI6MjA3MTk5NDc5N30.PwoaTVvLBVAapWL_zfYu6KjWGPKPqQdnHkiXUxx7y3g";
+
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const joinBtn = document.getElementById("joinBtn");
+  const emailInput = document.getElementById("emailInput");
+  const chatDiv = document.getElementById("chat");
+  const chatBox = document.getElementById("chat-box");
+  const messageInput = document.getElementById("message");
+  const sendBtn = document.getElementById("send");
+
+  // Admins and custom names
+  const adminEmails = ["admin1@example.com", "admin2@example.com"];
+  const customNames = {
+    "vip@example.com": "CoolKid42",
+    "special@example.com": "TheLegend"
+  };
+
+  let currentUser = null;
+  let displayName = null;
+  let isAdmin = false;
+  let bannedUsers = [];
+
+  async function loadBanned() {
+    let { data } = await supabase.from("banned").select("email");
+    bannedUsers = data.map(row => row.email);
+  }
+
+  joinBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      currentUser = email;
+      displayName = customNames[email] || email;
+      isAdmin = adminEmails.includes(email);
+      await loadBanned();
+
+      document.getElementById("login").style.display = "none";
+      chatDiv.style.display = "block";
+
+      loadMessages();
+      subscribeMessages();
+    } else {
+      alert("Please enter a valid email.");
+    }
+  };
+
+  sendBtn.onclick = async () => {
+    if (bannedUsers.includes(currentUser)) {
+      alert("You are banned from chatting.");
+      return;
+    }
+    const msg = messageInput.value;
+    if (msg.trim() !== "") {
+      await supabase.from("messages").insert([
+        { email: currentUser, name: displayName, text: msg }
+      ]);
+      messageInput.value = "";
+    }
+  };
+
+  async function loadMessages() {
+    let { data } = await supabase.from("messages").select("*").order("inserted_at", { ascending: true });
+    chatBox.innerHTML = "";
+    data.forEach(addMessage);
+  }
+
+  function addMessage(msg) {
+    const div = document.createElement("div");
+    div.textContent = msg.name + ": " + msg.text;
+
+    if (isAdmin) {
+      const delBtn = document.createElement("span");
+      delBtn.textContent = " [Delete]";
+      delBtn.className = "admin-btn";
+      delBtn.onclick = async () => {
+        await supabase.from("messages").delete().eq("id", msg.id);
+        loadMessages();
+      };
+
+      const banBtn = document.createElement("span");
+      banBtn.textContent = " [Ban]";
+      banBtn.className = "admin-btn";
+      banBtn.onclick = async () => {
+        await supabase.from("banned").insert([{ email: msg.email }]);
+        await loadBanned();
+      };
+
+      div.appendChild(delBtn);
+      div.appendChild(banBtn);
+    }
+
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function subscribeMessages() {
+    supabase.channel("chat-room")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, payload => {
+        addMessage(payload.new);
+      })
+      .subscribe();
+  }
+</script>
+
+</body>
+</html>
