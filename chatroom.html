@@ -28,12 +28,16 @@
 </div>
 
 <script>
-  // 🔑 Replace these with your Supabase keys
-  const SUPABASE_URL = "https://lwkgijcmnobxxsbvzewp.supabase.co";
+  // =========================
+  // 🔑 Put your Supabase keys here
+  const SUPABASE_URL = "https://lwkgijcmnobxxsbvzewp.supabase.co;
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3a2dpamNtbm9ieHhzYnZ6ZXdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0MTg3OTcsImV4cCI6MjA3MTk5NDc5N30.PwoaTVvLBVAapWL_zfYu6KjWGPKPqQdnHkiXUxx7y3g";
 
+  // Initialize Supabase client
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // =========================
+  // DOM Elements
   const loginDiv = document.getElementById("login");
   const chatDiv = document.getElementById("chat");
   const joinBtn = document.getElementById("joinBtn");
@@ -42,8 +46,8 @@
   const messageInput = document.getElementById("message");
   const sendBtn = document.getElementById("send");
 
-  // Admins and custom names
-  const adminEmails = ["botfunny2.0@gmail.com", "bsmith26@tigertown.com"];
+  // Admin emails and custom names
+  const adminEmails = ["botfunny2.0@gmail.com", "admin2@example.com"];
   const customNames = {
     "botfunny2.0@gmail.com": "bokit(owner)",
     "bsmith26@tigertown.com": "bokit(owner)"
@@ -54,11 +58,13 @@
   let isAdmin = false;
   let bannedUsers = [];
 
+  // Load banned users
   async function loadBanned() {
-    let { data } = await supabase.from("banned").select("email");
+    const { data } = await supabase.from("banned").select("email");
     bannedUsers = data.map(row => row.email);
   }
 
+  // =========================
   // Join chat
   joinBtn.onclick = async () => {
     const email = emailInput.value.trim();
@@ -81,6 +87,7 @@
     subscribeMessages();
   };
 
+  // =========================
   // Send message
   sendBtn.onclick = async () => {
     if (bannedUsers.includes(currentUser)) {
@@ -94,9 +101,11 @@
     await supabase.from("messages").insert([
       { email: currentUser, name: displayName, text: msg }
     ]);
+
     messageInput.value = "";
   };
 
+  // =========================
   // Load all messages
   async function loadMessages() {
     const { data } = await supabase
@@ -108,6 +117,7 @@
     data.forEach(addMessage);
   }
 
+  // Add a message to chat box
   function addMessage(msg) {
     const div = document.createElement("div");
     div.textContent = msg.name + ": " + msg.text;
@@ -137,7 +147,8 @@
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
-  // Real-time updates
+  // =========================
+  // Subscribe to new messages (Realtime)
   function subscribeMessages() {
     supabase.channel("chat-room")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, payload => {
