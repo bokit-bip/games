@@ -1,20 +1,37 @@
-
 <!DOCTYPE html>
-
-
+<html>
 <head>
-	 <title>
-   Chili Bowl Games Secret Ruffle Stash 
-  </title>
-
+  <title>Chili Bowl Games Secret Ruffle Stash</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background-color: #000000;
+      overflow: hidden;
+    }
+    #game {
+      display: block;
+      border: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  </style>
 </head>
+<body>
+  <object id="game" data="hobo.swf" type="application/x-shockwave-flash"></object>
 
-  <body>
-    
-    <style> body {background-color: #000000 }</style>
-    <embed src="hobo.swf" width="1200" height="1000"> </embed>
-
-   <script src="ruffle.js"></script>
-
+  <script src="ruffle.js"></script>
+  <script>
+    function resizeGame() {
+      let game = document.getElementById("game");
+      game.width = window.innerWidth;
+      game.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeGame);
+    resizeGame();
+  </script>
 </body>
 </html>
